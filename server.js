@@ -22,10 +22,13 @@ config = getBashParameters(config, BASH_COLORS_HELPER);
 
 let io = require('socket.io').listen(app.listen(PORT, function() {
 	console.log(`Server run on port ${PORT}`);
+	return {
+		pingTimeout: 2000,
+  		pingInterval: 10000
+	}
 }));
 
 io.sockets.on('connection', function(socket) {
-
 	RTCMultiConnectionServer.addSocket(socket, config);
 
 	/**
@@ -44,6 +47,21 @@ io.sockets.on('connection', function(socket) {
 	})
 
 	/**
+	  * Get current user list in room
+	  *
+	  * @emit monit
+	  */
+	 socket.on('monitor_student', function(payload) {
+		let socs = io.sockets.connected;
+		io.of('/').in(payload.channel).clients((error, clients) => {
+			if (error) throw error;
+			let client_rooms = Object.values(clients);
+
+			io.in(socket.channel).emit('monit_student', Object.values(socs).filter(item => item.channel != null && client_rooms.indexOf(item.id) != -1).map(item => item.user))
+		});
+	})
+
+	/**
 	 * Assign user to room
 	 *
 	 * @emit is_online
@@ -54,8 +72,23 @@ io.sockets.on('connection', function(socket) {
 		socket.token = payload.token
 
 		socket.join(socket.channel)
-		// console.log((typeof socket.user != 'undefined' ? socket.user.email : 'Anonymous')+' Join to '+socket.channel)
+		// console.log((typeof socket.user != 'undefined' ? socket.user.email : 'Anonymous')+' Join to '+socket.channel + ' with ip '+(typeof socket.user != 'undefined' ? socket.user.ip : 'unknown'))
 		io.in(socket.channel).emit(`is_online`, payload.user);
+	})
+
+	/**
+	 * Assign user to room
+	 *
+	 * @emit is_online
+	 */
+	 socket.on('getin_student', function(payload) {
+		socket.user = payload.user
+		socket.channel = payload.channel
+		socket.token = payload.token
+
+		socket.join(socket.channel)
+		// console.log((typeof socket.user != 'undefined' ? socket.user.no_ujian : 'Anonymous')+' Join to '+socket.channel + ' with ip '+(typeof socket.user != 'undefined' ? socket.user.ip : 'unknown'))
+		io.in(socket.channel).emit(`is_online_student`, payload.user);
 	})
 
 	/**
