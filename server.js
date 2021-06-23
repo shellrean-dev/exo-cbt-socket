@@ -24,8 +24,8 @@ let io = require('socket.io').listen(app.listen(PORT, function() {
 	console.log(`Server run on port ${PORT}`);
 }));
 
-io.set('pingTimeout', 4000); 
-io.set('pingInterval', 2000);
+io.set('heartbeat timeout', 4000); 
+io.set('heartbeat interval', 2000);
 
 io.sockets.on('connection', function(socket) {
 	RTCMultiConnectionServer.addSocket(socket, config);
