@@ -91,6 +91,24 @@ io.sockets.on('connection', function(socket) {
 	})
 
 	/**
+	 * Assign user to room
+	 *
+	 * @emit is_online
+	 */
+	 socket.on('not_in_tab_student', function(payload) {
+		io.in(socket.channel).emit(`is_not_tab_online_student`, payload.user);
+	})
+
+	/**
+	 * Assign user to room
+	 *
+	 * @emit is_online
+	 */
+	 socket.on('in_tab_student', function(payload) {
+		io.in(socket.channel).emit(`is_in_tab_online_student`, payload.user);
+	})
+
+	/**
 	 * Assign comment user to room
 	 *
 	 * @emit comment
