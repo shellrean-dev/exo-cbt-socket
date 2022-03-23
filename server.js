@@ -1,24 +1,13 @@
 const express = require('express')
 const bodyParser = require('body-parser')
-const http = require('http');
-const RTCMultiConnectionServer = require('rtcmulticonnection-server')
 const app = express();
 
 app.use(bodyParser.json());
 
 var PORT = 3000;
+const CHANNEL_PESERTA = "rtpkdorstqpdolrofvetdfsnzctsrogmurweidpnvasurslhyjvwuqfnicnapiwoehlzfaeifaulchfyejamttwvoddeozuytadqfpfmccmbdzrvoebldpduzuhrrxhn";
+const CHANNEL_ADMIN = "ierkxjvehubrykwhnuxihnvyclbymtysjezsqqkxifqvismfaufgbiojbsjfczngairqwlayabsuxynzzqbyehycauzdavbzwjeozwdloctmikvzjmdmyulavnilgsre";
 
-const jsonPath = {
-	config: 'config.json',
-	logs: 'logs.json'
-}
-
-const BASH_COLORS_HELPER = RTCMultiConnectionServer.BASH_COLORS_HELPER;
-const getValuesFromConfigJson = RTCMultiConnectionServer.getValuesFromConfigJson;
-const getBashParameters = RTCMultiConnectionServer.getBashParameters;
-
-var config = getValuesFromConfigJson(jsonPath);
-config = getBashParameters(config, BASH_COLORS_HELPER);
 
 let io = require('socket.io').listen(app.listen(PORT, function() {
 	console.log(`Server run on port ${PORT}`);
@@ -27,8 +16,9 @@ let io = require('socket.io').listen(app.listen(PORT, function() {
 io.set('heartbeat timeout', 4000); 
 io.set('heartbeat interval', 2000);
 
+var pesertas = {}
 io.sockets.on('connection', function(socket) {
-	RTCMultiConnectionServer.addSocket(socket, config);
+	// RTCMultiConnectionServer.addSocket(socket, config);
 
 	/**
 	  * Get current user list in room
@@ -55,8 +45,10 @@ io.sockets.on('connection', function(socket) {
 		io.of('/').in(payload.channel).clients((error, clients) => {
 			if (error) throw error;
 			let client_rooms = Object.values(clients);
+			// console.log("BUSETTT\n", Object.values(pesertas))
 
-			io.in(socket.channel).emit('monit_student', Object.values(socs).filter(item => item.channel != null && client_rooms.indexOf(item.id) != -1).map(item => item.user))
+			// io.in(socket.channel).emit('monit_student', Object.values(socs).filter(item => item.channel == 'student_connect_channel' && client_rooms.indexOf(item.id) != -1).map(item => item.user))
+			io.in("student_connect_channel").emit('monit_student', Object.values(pesertas))
 		});
 	})
 
@@ -68,10 +60,8 @@ io.sockets.on('connection', function(socket) {
 	socket.on('getin', function(payload) {
 		socket.user = payload.user
 		socket.channel = payload.channel
-		socket.token = payload.token
-
+		console.log("JOIN CHANNEL ADMIN: ", socket.user)
 		socket.join(socket.channel)
-		// console.log((typeof socket.user != 'undefined' ? socket.user.email : 'Anonymous')+' Join to '+socket.channel + ' with ip '+(typeof socket.user != 'undefined' ? socket.user.ip : 'unknown'))
 		io.in(socket.channel).emit(`is_online`, payload.user);
 	})
 
@@ -83,10 +73,9 @@ io.sockets.on('connection', function(socket) {
 	 socket.on('getin_student', function(payload) {
 		socket.user = payload.user
 		socket.channel = payload.channel
-		socket.token = payload.token
-
+		console.log("JOIN CHANNEL: ", socket.user)
+		pesertas[socket.user.id] = socket.user;
 		socket.join(socket.channel)
-		// console.log((typeof socket.user != 'undefined' ? socket.user.no_ujian : 'Anonymous')+' Join to '+socket.channel + ' with ip '+(typeof socket.user != 'undefined' ? socket.user.ip : 'unknown'))
 		io.in(socket.channel).emit(`is_online_student`, payload.user);
 	})
 
@@ -96,6 +85,10 @@ io.sockets.on('connection', function(socket) {
 	 * @emit is_online
 	 */
 	 socket.on('not_in_tab_student', function(payload) {
+		if(typeof socket.user != 'undefined') {
+			socket.user.intab = false
+			pesertas[socket.user.id].intab = false
+		}
 		io.in(socket.channel).emit(`is_not_tab_online_student`, payload.user);
 	})
 
@@ -105,26 +98,12 @@ io.sockets.on('connection', function(socket) {
 	 * @emit is_online
 	 */
 	 socket.on('in_tab_student', function(payload) {
+		if(typeof socket.user != 'undefined') {
+			socket.user.intab = true
+			pesertas[socket.user.id].intab = true
+		}
 		io.in(socket.channel).emit(`is_in_tab_online_student`, payload.user);
 	})
-
-	/**
-	 * Assign comment user to room
-	 *
-	 * @emit comment
-	 */
-	socket.on('comment', function(payload) {
-		io.in(socket.channel).emit('comment',payload.comment)
-	})
-
-	/**
-	 * Close classroom live
-	 *
-	 * @emmit close
-	 */
-	 socket.on('close_classroom', function() {
-	 	io.in(socket.channel).emit('close_classroom')
-	 })
 
 	/**
 	 * Disconnect user to room
@@ -133,6 +112,10 @@ io.sockets.on('connection', function(socket) {
 	 */
 	socket.on('disconnect', function(username) {
 		io.in(socket.channel).emit('is_offline', socket.user);
+		console.log("DISCONNECT FROM CHANNEL: ", socket.user)
+		if(typeof socket.user != 'undefined' && socket.user.no_ujian != 'undefined') {
+			delete pesertas[socket.user.id];
+		}
 		socket.leave(socket.channel);
 	})
 
@@ -144,6 +127,10 @@ io.sockets.on('connection', function(socket) {
 	socket.on('exit', function(payload) {
 		// console.log((typeof socket.user != 'undefined' ? socket.user.email : 'Anonymous')+' leave from '+socket.channel)
 		io.in(socket.channel).emit('is_offline', socket.user);
+		console.log("EXIT FROM CHANNEL: ", socket.user)
+		if(typeof socket.user != 'undefined' && socket.user.no_ujian != 'undefined') {
+			delete pesertas[socket.user.id];
+		}
 		socket.leave(socket.channel);
 	})
 })
