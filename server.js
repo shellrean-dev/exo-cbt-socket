@@ -87,7 +87,9 @@ io.sockets.on('connection', function(socket) {
 	 socket.on('not_in_tab_student', function(payload) {
 		if(typeof socket.user != 'undefined') {
 			socket.user.intab = false
-			pesertas[socket.user.id].intab = false
+			if(typeof pesertas[socket.user.id] != 'undefined') {
+				pesertas[socket.user.id].intab = false
+			}
 		}
 		io.in(socket.channel).emit(`is_not_tab_online_student`, payload.user);
 	})
@@ -100,7 +102,9 @@ io.sockets.on('connection', function(socket) {
 	 socket.on('in_tab_student', function(payload) {
 		if(typeof socket.user != 'undefined') {
 			socket.user.intab = true
-			pesertas[socket.user.id].intab = true
+			if(typeof pesertas[socket.user.id] != 'undefined') {
+				pesertas[socket.user.id].intab = true
+			}
 		}
 		io.in(socket.channel).emit(`is_in_tab_online_student`, payload.user);
 	})
@@ -114,7 +118,9 @@ io.sockets.on('connection', function(socket) {
 		io.in(socket.channel).emit('is_offline', socket.user);
 		console.log("DISCONNECT FROM CHANNEL: ", socket.user)
 		if(typeof socket.user != 'undefined' && socket.user.no_ujian != 'undefined') {
-			delete pesertas[socket.user.id];
+			if(typeof pesertas[socket.user.id] != 'undefined') {
+				delete pesertas[socket.user.id];
+			}
 		}
 		socket.leave(socket.channel);
 	})
@@ -129,7 +135,9 @@ io.sockets.on('connection', function(socket) {
 		io.in(socket.channel).emit('is_offline', socket.user);
 		console.log("EXIT FROM CHANNEL: ", socket.user)
 		if(typeof socket.user != 'undefined' && socket.user.no_ujian != 'undefined') {
-			delete pesertas[socket.user.id];
+			if(typeof pesertas[socket.user.id] != 'undefined') {
+				delete pesertas[socket.user.id];
+			}
 		}
 		socket.leave(socket.channel);
 	})
